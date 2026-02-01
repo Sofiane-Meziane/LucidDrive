@@ -183,8 +183,8 @@ while cap.isOpened():
             # Visuels - Couleur selon le niveau
             couleur = (0, 255, 0) # Vert (Conduite Normale)
             if "VIGILANCE" in etat: couleur = (0, 200, 255) # Jaune
-            if "PAUSE" in etat: couleur = (0, 165, 255) # Orange
-            if "ARRET" in etat: couleur = (0, 0, 255) # Rouge
+            if "PAUSE" in etat or "RECOMMAND" in etat: couleur = (0, 165, 255) # Orange
+            if "ARRÊT" in etat or "ARRET" in etat: couleur = (0, 0, 255) # Rouge
             
             # Affichage à l'écran - Style Automobile
             cv2.putText(image, f"{etat} ({int(score_vigilance)}%)", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, couleur, 2)

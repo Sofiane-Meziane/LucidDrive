@@ -48,64 +48,79 @@ class SystemeFlouFatigue:
 
     # --- CALCULATEURS D'APPARTENANCE DES ANTÉCÉDENTS ---
     
-    # EAR (Ratio d'Aspect de l'Oeil)
+    # EAR (Ratio d'Aspect de l'Oeil) - Chevauchement amélioré pour transitions fluides
     def mu_ear_ferme(self, x):
-        return self.appartenance_trapezoidale(x, [0.0, 0.0, 0.15, 0.19])
+        # Yeux fermés : EAR < 0.20
+        return self.appartenance_trapezoidale(x, [0.0, 0.0, 0.15, 0.22])
 
     def mu_ear_fatigue(self, x):
-        # Réduction légère (0.35 -> 0.29) pour que à 0.30 on soit sûr d'être "Réveillé"
-        # On garde quand même un chevauchement avec "Ouvert" (qui commence à 0.22)
-        return self.appartenance_triangulaire(x, [0.17, 0.25, 0.29]) 
+        # Yeux mi-clos/fatigués : EAR entre 0.18 et 0.30
+        # Chevauchement étendu pour transitions fluides
+        return self.appartenance_triangulaire(x, [0.18, 0.24, 0.32])
 
     def mu_ear_ouvert(self, x):
-        # Elargissement vers la gauche (jusqu'à 0.22) pour ne pas couper "Alerte" trop vite
-        # Plateau à partir de 0.24 (au lieu de 0.26) pour garantir le 100% encore plus vite
-        return self.appartenance_trapezoidale(x, [0.22, 0.24, 0.6, 0.6])
+        # Yeux bien ouverts : EAR > 0.26
+        # Plateau dès 0.30 pour qu'un EAR normal (0.30-0.35) donne 100% d'appartenance
+        return self.appartenance_trapezoidale(x, [0.26, 0.30, 0.6, 0.6])
 
-    # Fréquence de Bâillement - Plus fin pour des pas de ~10%
+    # Fréquence de Bâillement - Chevauchement progressif
     def mu_baillement_nul(self, x):
-        # "Nul" = 0-1 bâillements
-        return self.appartenance_trapezoidale(x, [0, 0, 1, 2])
+        # "Nul" = 0 bâillement, décroît jusqu'à 2
+        return self.appartenance_trapezoidale(x, [0, 0, 0.5, 2])
     
     def mu_baillement_rare(self, x):
-        # "Rare" = 1-4 bâillements (pic à 2)
-        return self.appartenance_triangulaire(x, [1, 2, 4])
+        # "Rare" = 1-3 bâillements (pic à 2)
+        return self.appartenance_triangulaire(x, [0.5, 2, 4])
+    
+    def mu_baillement_modere(self, x):
+        # "Modéré" = 2-5 bâillements (pic à 3.5) - NOUVEL ENSEMBLE
+        return self.appartenance_triangulaire(x, [2, 3.5, 5])
     
     def mu_baillement_frequent(self, x):
-        # On réduit le chevauchement : "Fréquent" grimpe très vite après 3
-        # On utilise une pente raide pour dominer l'univers
-        return self.appartenance_trapezoidale(x, [3.5, 4.0, 1000, 1000])
-
-    # Fréquence de Clignement Lent - Plus fin pour des pas de ~10%
-    def mu_clignement_normal(self, x):
-        # Ne reste "Normal" que jusqu'à 1 clignement
-        return self.appartenance_trapezoidale(x, [0, 0, 0, 2])
-    
-    def mu_clignement_inquietant(self, x):
-        # "Inquiétant" = 1-4 clignements (pic à 2)
-        return self.appartenance_trapezoidale(x, [1, 2, 3, 5])
-        
-    def mu_clignement_critique(self, x):
-        # "Critique" dès 4 clignements
+        # "Fréquent" = > 4 bâillements
         return self.appartenance_trapezoidale(x, [4, 6, 1000, 1000])
 
-    # --- DÉFINITIONS D'APPARTENANCE DES CONSÉQUENTS (Vigilance) ---
-    def mu_vigilance_danger(self, x):
-        # On déplace le pic vers 0 pour que le centroïde soit très bas
-        # Triangle [0, 0, 30]
-        return self.appartenance_triangulaire(x, [0, 0, 30])
+    # Fréquence de Clignement Lent - Chevauchement progressif
+    def mu_clignement_normal(self, x):
+        # Normal jusqu'à 2 clignements lents
+        return self.appartenance_trapezoidale(x, [0, 0, 1, 3])
     
-    def mu_vigilance_somnolence(self, x):
-        # Triangle [20, 50, 70]
-        return self.appartenance_triangulaire(x, [20, 50, 70])
+    def mu_clignement_leger(self, x):
+        # Légèrement élevé : 1-4 clignements - NOUVEL ENSEMBLE
+        return self.appartenance_triangulaire(x, [1, 2.5, 4])
+    
+    def mu_clignement_inquietant(self, x):
+        # "Inquiétant" = 3-6 clignements (pic à 4)
+        return self.appartenance_triangulaire(x, [3, 4.5, 6])
+        
+    def mu_clignement_critique(self, x):
+        # "Critique" >= 5 clignements
+        return self.appartenance_trapezoidale(x, [5, 7, 1000, 1000])
+
+    # --- DÉFINITIONS D'APPARTENANCE DES CONSÉQUENTS (Vigilance) ---
+    # 4 ENSEMBLES pour correspondre aux 4 états du tableau
+    
+    def mu_vigilance_danger(self, x):
+        # ARRÊT IMMÉDIAT : Score 0-30
+        # Plateau de 0 à 10 pour garantir un centroïde proche de 0
+        return self.appartenance_trapezoidale(x, [0, 0, 10, 30])
+    
+    def mu_vigilance_fatigue_forte(self, x):
+        # PAUSE RECOMMANDÉE : Score 30-50, centroïde ~40
+        return self.appartenance_triangulaire(x, [20, 40, 55])
+    
+    def mu_vigilance_fatigue_legere(self, x):
+        # VIGILANCE EN BAISSE : Score 50-70, centroïde ~60
+        return self.appartenance_triangulaire(x, [45, 60, 75])
     
     def mu_vigilance_alerte(self, x):
-        # Triangle [60, 100, 100]
-        return self.appartenance_triangulaire(x, [60, 100, 100])
+        # CONDUITE NORMALE : Score 70-100
+        # Plateau de 90 à 100 pour garantir un centroïde proche de 100
+        return self.appartenance_trapezoidale(x, [65, 90, 100, 100])
 
     def calculer(self, valeur_ear, valeur_baillement, valeur_clignement=0):
         """
-        Calcule le score de vigilance.
+        Calcule le score de vigilance avec transitions fluides.
         EAR doit être approx 0.0 - 0.5
         Bâillement doit être approx 0 - 10
         Clignement doit être approx 0 - 20 (Clignements lents)
@@ -119,104 +134,122 @@ class SystemeFlouFatigue:
         
         b_nul = self.mu_baillement_nul(valeur_baillement)
         b_rare = self.mu_baillement_rare(valeur_baillement)
+        b_modere = self.mu_baillement_modere(valeur_baillement)
         b_frequent = self.mu_baillement_frequent(valeur_baillement)
 
         c_normal = self.mu_clignement_normal(valeur_clignement)
+        c_leger = self.mu_clignement_leger(valeur_clignement)
         c_inquietant = self.mu_clignement_inquietant(valeur_clignement)
         c_critique = self.mu_clignement_critique(valeur_clignement)
 
-        # 2. Application des Règles (Calcul des niveaux d'activation)
-        # R1: SI EAR="Fermé" -> Danger
-        r1 = e_ferme 
-
-        # R2: SI EAR="Fatigué" ET Bâillement="Fréquent" -> Danger
-        r2 = min(e_fatigue, b_frequent)
-
-        # R3: SI EAR="Fatigué" ET (Bâillement="Rare" OU Bâillement="Nul") -> Somnolence
-        r3 = min(e_fatigue, max(b_rare, b_nul))
-
-        # R4: SI EAR="Ouvert" ET Bâillement="Fréquent" -> Danger
-        r4 = min(e_ouvert, b_frequent)
-
-        # R5: SI EAR="Ouvert" ET Bâillement="Rare" -> Somnolence
-        r5 = min(e_ouvert, b_rare)
-
-        # R6: SI EAR="Ouvert" ET Bâillement="Nul" ET Clignement="Normal" -> Alerte
-        # C'est la règle "Tout va bien". Elle requiert maintenant explicitement des clignements normaux.
-        r6 = min(e_ouvert, b_nul, c_normal)
+        # 2. Application des Règles - SYSTÈME GRADUÉ pour transitions fluides
+        # ==================================================================
         
-        # R7: SI Clignement Lent = Critique -> Danger
-        r7 = c_critique
+        # === RÈGLES POUR ALERTE (CONDUITE NORMALE - 70-100%) ===
+        # R1: Yeux ouverts + pas de bâillement + clignements normaux -> ALERTE
+        r_alerte_1 = min(e_ouvert, b_nul, c_normal)
+        # R2: Yeux ouverts + bâillements rares + clignements normaux -> ALERTE (légère baisse)
+        r_alerte_2 = min(e_ouvert, b_rare, c_normal) * 0.8
         
-        # R8: SI Clignement Lent = Inquiétant -> SOMNOLENCE
-        r8 = c_inquietant
+        # === RÈGLES POUR FATIGUE LÉGÈRE (VIGILANCE EN BAISSE - 50-70%) ===
+        # R3: Yeux ouverts + bâillements rares -> Fatigue légère
+        r_fatigue_legere_1 = min(e_ouvert, b_rare)
+        # R4: Yeux ouverts + clignements légers -> Fatigue légère
+        r_fatigue_legere_2 = min(e_ouvert, c_leger)
+        # R5: Yeux fatigués + pas de bâillement -> Fatigue légère
+        r_fatigue_legere_3 = min(e_fatigue, b_nul)
+        # R6: Bâillements modérés seuls -> Fatigue légère
+        r_fatigue_legere_4 = b_modere * 0.7
         
-        # R9 (Synergie): SI Clignement = Inquietant ET Bâillement = Fréquent -> DANGER
-        # Seulement l'accumulation SEVERE des deux symptômes aggrave le diagnostic
-        r9 = min(c_inquietant, b_frequent)
-
-        # --- DANGER ---
-        # Active si R1, R2, R4, R7, R9
-        act_danger = max(r1, r2, r4, r7, r9)
+        # === RÈGLES POUR FATIGUE FORTE (PAUSE RECOMMANDÉE - 30-50%) ===
+        # R7: Yeux fatigués + bâillements rares/modérés -> Fatigue forte
+        r_fatigue_forte_1 = min(e_fatigue, max(b_rare, b_modere))
+        # R8: Yeux ouverts + bâillements modérés -> Fatigue forte
+        r_fatigue_forte_2 = min(e_ouvert, b_modere)
+        # R9: Clignements inquiétants seuls -> Fatigue forte
+        r_fatigue_forte_3 = c_inquietant * 0.8
+        # R10: Yeux fatigués + clignements légers -> Fatigue forte
+        r_fatigue_forte_4 = min(e_fatigue, c_leger)
         
-        # --- SOMNOLENCE ---
-        # INHIBITION RADICALE : La somnolence s'efface COMPLÈTEMENT dès que le danger est significatif
-        # Cela empêche le centroïde de remonter
-        brut_somnolence = max(r3, r5, r8)
-        act_somnolence = brut_somnolence * (1.0 - act_danger)
+        # === RÈGLES POUR DANGER (ARRÊT IMMÉDIAT - 0-30%) ===
+        # R11: Yeux fermés -> DANGER
+        r_danger_1 = e_ferme
+        # R12: Yeux fatigués + bâillements fréquents -> DANGER
+        r_danger_2 = min(e_fatigue, b_frequent)
+        # R13: Yeux ouverts + bâillements fréquents -> DANGER
+        r_danger_3 = min(e_ouvert, b_frequent)
+        # R14: Clignements critiques -> DANGER
+        r_danger_4 = c_critique
+        # R15: Yeux fatigués + clignements inquiétants -> DANGER
+        r_danger_5 = min(e_fatigue, c_inquietant)
+        # R16: Bâillements fréquents + clignements inquiétants -> DANGER
+        r_danger_6 = min(b_frequent, c_inquietant)
         
-        # --- ALERTE ---
-        # INHIBITION RADICALE : L'alerte s'efface devant tout signe de fatigue
-        act_alerte = r6 * (1.0 - act_somnolence) * (1.0 - act_danger)
+        # 3. Agrégation des niveaux d'activation (sans inhibition agressive)
+        act_alerte = max(r_alerte_1, r_alerte_2)
+        act_fatigue_legere = max(r_fatigue_legere_1, r_fatigue_legere_2, 
+                                  r_fatigue_legere_3, r_fatigue_legere_4)
+        act_fatigue_forte = max(r_fatigue_forte_1, r_fatigue_forte_2,
+                                 r_fatigue_forte_3, r_fatigue_forte_4)
+        act_danger = max(r_danger_1, r_danger_2, r_danger_3, 
+                         r_danger_4, r_danger_5, r_danger_6)
         
-        # 4. Défuzzification (Centroïde)
+        # 4. Défuzzification (Centroïde) avec 4 ensembles
         numerateur = 0.0
         denominateur = 0.0
         
         for x_val in self.x_vigilance:
-            # Calcul de l'appartenance dans chaque ensemble de sortie pour ce x_val
+            # Calcul de l'appartenance dans chaque ensemble de sortie
             mu_d = self.mu_vigilance_danger(x_val)
-            mu_s = self.mu_vigilance_somnolence(x_val)
+            mu_ff = self.mu_vigilance_fatigue_forte(x_val)
+            mu_fl = self.mu_vigilance_fatigue_legere(x_val)
             mu_a = self.mu_vigilance_alerte(x_val)
             
             # Écrêtage par le niveau d'activation
             c_d = min(mu_d, act_danger)
-            c_s = min(mu_s, act_somnolence)
+            c_ff = min(mu_ff, act_fatigue_forte)
+            c_fl = min(mu_fl, act_fatigue_legere)
             c_a = min(mu_a, act_alerte)
             
-            # Union (Max)
-            mu_agrege = max(c_d, max(c_s, c_a))
+            # Union (Max) de tous les ensembles
+            mu_agrege = max(c_d, c_ff, c_fl, c_a)
             
             numerateur += x_val * mu_agrege
             denominateur += mu_agrege
             
         if denominateur == 0:
-            return 50.0 # Valeur par défaut si aucune règle n'est activée
+            return 100.0  # Valeur par défaut = Conduite normale (tout va bien)
         
         # Calcul du score brut (Centroïde)
         score_brut = numerateur / denominateur
         
-        # CALIBRAGE (Mapping linéaire vers 0-100)
-        # On mappe [14, 86] -> [0, 100] pour être sûr d'atteindre les extrêmes
-        min_in = 14.0
-        max_in = 86.0
+        # CALIBRAGE : Le centroïde produit des valeurs entre ~10 et ~88
+        # On mappe cette plage vers [0, 100] pour couvrir tous les états
+        min_centroide = 10.0   # Centroïde minimal (danger maximal)
+        max_centroide = 88.0   # Centroïde maximal (alerte maximale)
         
-        score_calibre = (score_brut - min_in) * (100.0 / (max_in - min_in))
+        # Mapping linéaire
+        score = (score_brut - min_centroide) / (max_centroide - min_centroide) * 100.0
         
         # Bornage (Clamping) entre 0 et 100
-        score_calibre = max(0.0, min(100.0, score_calibre))
+        score = max(0.0, min(100.0, score))
         
-        return score_calibre
+        return score
 
     def obtenir_etiquette_etat(self, score):
         """
         Retourne un tuple (état, recommandation) adapté aux systèmes automobiles.
+        Score (%)   | État                  | Recommandation
+        70-100      | CONDUITE NORMALE      | Vigilance correcte
+        50-70       | VIGILANCE EN BAISSE   | Pensez à un café ou aerez
+        30-50       | PAUSE RECOMMANDEE     | Faites une pause des que possible
+        0-30        | ARRET IMMEDIAT        | Arretez-vous immediatement
         """
         if score < 30:
-            return ("ARRET IMMEDIAT", "Arretez-vous immediatement dans un lieu sur.")
+            return ("ARRET IMMEDIAT", "Arretez-vous immediatement")
         elif score < 50:
-            return ("PAUSE RECOMMANDEE", "Faites une pause des que possible.")
+            return ("PAUSE RECOMMANDEE", "Faites une pause des que possible")
         elif score < 70:
-            return ("VIGILANCE EN BAISSE", "Pensez a prendre un cafe ou aerer.")
+            return ("VIGILANCE EN BAISSE", "Pensez a un cafe ou aerez")
         else:
-            return ("CONDUITE NORMALE", "Vigilance correcte.")
+            return ("CONDUITE NORMALE", "Vigilance correcte")
