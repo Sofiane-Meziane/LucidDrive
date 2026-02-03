@@ -70,5 +70,3 @@ python surveillance.py
 - **MediaPipe** (Points faciaux)
 - **Logique Floue** (Implémentation personnalisée)
 
----
-*Projet développé dans le cadre du cours de Logique Floue - M1*
