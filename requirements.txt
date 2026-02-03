@@ -1,2 +1,6 @@
-opencv-python
+# Core dependencies for LucidDrive - Driver Vigilance System
+# Tested with Python 3.11
+
+opencv-python==4.12.0.88
 mediapipe==0.10.9
+numpy==2.2.6
